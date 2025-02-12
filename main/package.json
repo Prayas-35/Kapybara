@@ -10,11 +10,15 @@
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.2.16",
+    "@radix-ui/react-dropdown-menu": "^2.1.6",
+    "@radix-ui/react-slot": "^1.1.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.39.3",
+    "js-cookie": "^3.0.5",
     "lucide-react": "^0.475.0",
     "next": "15.1.6",
+    "next-themes": "^0.4.4",
     "pg": "^8.13.1",
     "postgres": "^3.4.5",
     "react": "^19.0.0",
@@ -24,6 +28,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@types/js-cookie": "^3.0.6",
     "@types/node": "^20",
     "@types/pg": "^8.11.11",
     "@types/react": "^19",
