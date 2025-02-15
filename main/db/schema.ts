@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, boolean, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp } from "drizzle-orm/pg-core";
 
 // Users Table
 export const users = pgTable("users", {
@@ -18,13 +18,6 @@ export const projects = pgTable("projects", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Categories Table
-export const categories = pgTable("categories", {
-  id: serial("id").primaryKey(),
-  name: text("name").unique().notNull(),
-  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
-});
-
 // Tasks Table
 export const tasks = pgTable("tasks", {
   id: serial("id").primaryKey(),
@@ -34,7 +27,6 @@ export const tasks = pgTable("tasks", {
   priority: integer("priority").default(3), // 1: High, 2: Medium, 3: Low
   status: text("status").default("pending"), // pending, in-progress, completed
   projectId: integer("project_id").references(() => projects.id, { onDelete: "cascade" }),
-  categoryId: integer("category_id").references(() => categories.id, { onDelete: "set null" }),
   userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at").defaultNow(),
 });

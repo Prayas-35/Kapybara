@@ -1,95 +1,92 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { format, addDays, startOfWeek, addWeeks, subWeeks, isSameDay, getWeek } from 'date-fns';
-import { ChevronLeft, ChevronRight, Search, Plus, Menu, Edit, Calendar } from 'lucide-react';
+import { format, addDays, startOfWeek, addWeeks, subWeeks, isSameDay, getWeek, parseISO } from 'date-fns';
+import { ChevronLeft, ChevronRight, Search, Calendar } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { IoMdTrash } from "react-icons/io";
 import NavBar from '@/components/functions/NavBar';
-import { useAuth } from '../app/_contexts/authcontext';
+import { useAuth } from '@/app/_contexts/authcontext';
 import { TaskModal } from './task-modal';
 import { useModalStore } from "@/lib/store";
 import 'react-datepicker/dist/react-datepicker.css';
 
-interface Project {
-    _id: string;
-    name: string;
-    wardNumber: string;
-    date: Date;
-    time: string;
-    duration: number;
-    location: string;
-    supervision: string;
-    resources: string;
-    status: 'not-started' | 'working' | 'finished';
-    department?: string;
+interface Task {
+    id: number;
+    title: string;
+    description: string;
+    dueDate: string;
+    priority: number;
+    status: string;
+    projectId: number;
+    userId: number;
+    createdAt: string;
 }
 
-export default function WardProjectDashboard() {
+export default function calendar() {
     const { token } = useAuth();
-    const { openModal } = useModalStore();
+    const { openModal, closeModal } = useModalStore();
     const [currentDate, setCurrentDate] = useState<Date>(new Date());
-    const [projects, setProjects] = useState<Project[]>([]);
+    const [tasks, setTasks] = useState<Task[]>([]);
     const [searchTerm, setSearchTerm] = useState<string>('');
     const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
     const [isWeekPickerOpen, setIsWeekPickerOpen] = useState<boolean>(false);
+    const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
     const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
     const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
     const timeSlots = Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, '0')}:00`);
 
-    const handlePrevWeek = () => setCurrentDate(subWeeks(currentDate, 1));
-    const handleNextWeek = () => setCurrentDate(addWeeks(currentDate, 1));
+    useEffect(() => {
+        fetchTasks();
+    }, [token, closeModal]);
 
-    const handleDateTimeClick = (date: Date, time: string) => {
-        const dateTime = new Date(date);
-        const [hours, minutes] = time.split(':').map(Number);
-        dateTime.setHours(hours, minutes, 0, 0);
-        openModal(dateTime);
-    };
-
-    const fetchProjects = async () => {
+    const fetchTasks = async () => {
         try {
-            const response = await fetch('/api/getProject', {
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+            };
+
+            if (token) {
+                headers['Authorization'] = token;
+            }
+            const response = await fetch('/api/getTasks', {
                 method: 'POST',
-                headers: {
-                    'Cache-Control': 'no-cache',
-                    'Pragma': 'no-cache'
-                }
+                headers: headers,
             });
+
             if (response.ok) {
                 const data = await response.json();
-                console.log('Fetched projects:', data);
-                setProjects(prevProjects => {
-                    const newProjects = JSON.stringify(data) !== JSON.stringify(prevProjects) ? data : prevProjects;
-                    return newProjects;
-                });
+                setTasks(data);
             } else {
-                console.error('Failed to fetch projects:', response.status);
+                console.error('Failed to fetch tasks');
             }
         } catch (error) {
-            console.error('Error fetching projects:', error);
+            console.error('Error fetching tasks:', error);
         }
     };
 
-    useEffect(() => {
-        fetchProjects();
-    }, []);
+    const handlePrevWeek = () => setCurrentDate(subWeeks(currentDate, 1));
+    const handleNextWeek = () => setCurrentDate(addWeeks(currentDate, 1));
 
-    useEffect(() => {
-        const intervalId = setInterval(() => {
-            fetchProjects();
-        }, 60000); // Refetch every minute
+    const handleDateTimeClick = (date: Date, time: string, existingTask?: Task) => {
+        const dateTime = new Date(date);
+        const [hours, minutes] = time.split(':').map(Number);
+        dateTime.setHours(hours, minutes, 0, 0);
+        
+        if (existingTask) {
+            setSelectedTask(existingTask);
+        } else {
+            setSelectedTask(null);
+        }
+        
+        openModal(dateTime);
+    };
 
-        return () => clearInterval(intervalId);
-    }, []);
-
-    const handleDeleteProject = async (id: string) => {
-        console.log('Deleting project:', id);
+    const handleDeleteTask = async (id: number) => {
         try {
             const headers: Record<string, string> = {
                 'Content-Type': 'application/json',
@@ -99,41 +96,46 @@ export default function WardProjectDashboard() {
                 headers['Authorization'] = token;
             }
 
-            const response = await fetch('/api/deleteProject', {
-                method: 'POST',
+            const response = await fetch('/api/deleteTask', {
+                method: 'DELETE',
                 headers: headers,
                 body: JSON.stringify({ id }),
             });
 
             if (response.ok) {
-                setProjects(projects.filter((project) => project._id !== id));
-                fetchProjects();
+                setTasks(tasks.filter((task) => task.id !== id));
+                fetchTasks();
             } else {
-                alert('Failed to delete the project');
+                alert('Failed to delete the task');
             }
         } catch (error) {
-            console.error('Error deleting project', error);
-            alert('An error occurred while deleting the project.');
+            console.error('Error deleting task', error);
+            alert('An error occurred while deleting the task.');
         }
     };
 
-    const filteredProjects = searchTerm ? projects.filter(p => p.wardNumber.includes(searchTerm)) : projects;
-
-    const getProjectsForDateTime = (date: Date, time: string) => {
-        return filteredProjects.filter(p => isSameDay(new Date(p.date), date) && p.time === time);
+    const getTasksForDateTime = (date: Date, time: string) => {
+        return tasks.filter(task => {
+            const taskDate = parseISO(task.dueDate);
+            const taskDateUTC = new Date(taskDate.getUTCFullYear(), taskDate.getUTCMonth(), taskDate.getUTCDate(), taskDate.getUTCHours(), taskDate.getUTCMinutes(), taskDate.getUTCSeconds());
+            return isSameDay(taskDateUTC, date) && format(taskDateUTC, 'HH:00') === time;
+        });
     };
 
-    const handleMenuToggle = () => {
-        setIsMenuOpen((prevState) => !prevState);
-    };
+    const filteredTasks = searchTerm
+        ? tasks.filter(task =>
+            task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            task.description.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+        : tasks;
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'not-started':
+            case 'pending':
                 return 'bg-red-500';
-            case 'working':
+            case 'in-progress':
                 return 'bg-yellow-500';
-            case 'finished':
+            case 'completed':
                 return 'bg-green-500';
             default:
                 return 'bg-gray-500';
@@ -162,15 +164,17 @@ export default function WardProjectDashboard() {
 
     return (
         <div className="flex flex-col min-h-screen bg-background text-foreground">
-            <NavBar isMenuOpen={isMenuOpen} handleMenuToggle={handleMenuToggle} />
+            <NavBar isMenuOpen={isMenuOpen} handleMenuToggle={() => setIsMenuOpen(!isMenuOpen)} />
+
             <header className="bg-background p-4 sm:p-6 sticky top-[70px] z-10">
+                {/* Header content remains the same */}
                 <div className="container mx-auto">
                     <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0 sm:space-x-4">
                         <div className="relative w-full sm:w-auto order-2 sm:order-1">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
                             <Input
                                 type="text"
-                                placeholder="Search by ward number"
+                                placeholder="Search tasks..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="pl-10 w-full bg-input text-foreground border-input focus:ring-primary"
@@ -231,30 +235,35 @@ export default function WardProjectDashboard() {
                             <React.Fragment key={time}>
                                 <div className="p-1 sm:p-3 text-right text-sm sm:text-xl text-foreground bg-card">{time}</div>
                                 {weekDays.map((day, dayIndex) => {
-                                    const projectsForSlot = getProjectsForDateTime(day, time);
+                                    const tasksForSlot = getTasksForDateTime(day, time);
                                     return (
                                         <div
                                             key={`${dayIndex}-${timeIndex}`}
                                             className="border-[#7c4da3a3] border relative transition-colors duration-200 bg-background hover:bg-gray-100 cursor-pointer"
                                             onClick={() => handleDateTimeClick(day, time)}
                                         >
-                                            {projectsForSlot.map((project) => (
+                                            {tasksForSlot.map((task) => (
                                                 <div
-                                                    key={project._id}
-                                                    className={`${getStatusColor(project.status)} p-1 sm:p-2 text-xs overflow-hidden rounded-lg relative`}
-                                                    style={{ height: `${(project.duration - 1) * 101.25 + 100}%`, minHeight: '100%' }}
+                                                    key={task.id}
+                                                    className={`${getStatusColor(task.status)} p-1 sm:p-2 text-xs overflow-hidden rounded-lg relative`}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDateTimeClick(day, time, task);
+                                                    }}
                                                 >
-                                                    <div className="text-sm sm:text-xl text-white font-medium p-1 text-wrap leading-tight pr-6">{project.name}</div>
+                                                    <div className="text-sm sm:text-xl text-white font-medium p-1 text-wrap leading-tight pr-6">
+                                                        {task.title}
+                                                    </div>
                                                     <div className="text-xs sm:text-lg text-white font-medium text-wrap p-1 leading-tight">
-                                                        Ward {project.wardNumber}
+                                                        {task.description}
                                                     </div>
                                                     <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            handleDeleteProject(project._id);
+                                                            handleDeleteTask(task.id);
                                                         }}
                                                         className="absolute right-1 top-1 sm:right-2 sm:top-2 text-white hover:text-red-200 transition-colors duration-200"
-                                                        aria-label="Delete project"
+                                                        aria-label="Delete task"
                                                     >
                                                         <IoMdTrash size={16} className="sm:w-5 sm:h-5" />
                                                     </button>
@@ -269,7 +278,7 @@ export default function WardProjectDashboard() {
                 </div>
             </main>
 
-            <TaskModal />
+            <TaskModal selectedTask={selectedTask} onTaskUpdate={fetchTasks} />
         </div>
     );
 }
