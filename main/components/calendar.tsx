@@ -26,7 +26,7 @@ interface Task {
     createdAt: string;
 }
 
-export default function calendar() {
+export default function CalendarComponent() {
     const { token } = useAuth();
     const { openModal, closeModal } = useModalStore();
     const [currentDate, setCurrentDate] = useState<Date>(new Date());
