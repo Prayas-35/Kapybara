@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { AuthProvider } from "./_contexts/authcontext";
+// import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+// import { AppSidebar } from "@/components/app-sidebar"
+import Providers from "./providers";
 
 export const metadata: Metadata = {
   title: "Manager",
@@ -15,16 +18,21 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head />
       <body className="antialiased">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <AuthProvider>
-            {children}
-          </AuthProvider>
-        </ThemeProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <AuthProvider>
+              {/* <SidebarProvider> */}
+                {/* <AppSidebar /> */}
+                <Providers>
+                {children}
+                </Providers>
+              {/* </SidebarProvider> */}
+            </AuthProvider>
+          </ThemeProvider>
       </body>
     </html>
   );

@@ -1,13 +1,13 @@
 import { defineConfig } from "drizzle-kit";
+import "dotenv/config";
 
 export default defineConfig({
     out: "./drizzle",
     dialect: "postgresql",
     schema: "./db/schema.ts",
 
-    driver: "pglite",
     dbCredentials: {
-        url: "./database/",
+        url: "postgresql://postgres:safe@localhost:5432/tasker?connect_timeout=10&sslmode=disable",
     },
 
     extensionsFilters: ["postgis"],
@@ -22,14 +22,6 @@ export default defineConfig({
         prefix: "timestamp",
         table: "__drizzle_migrations__",
         schema: "public",
-    },
-
-    entities: {
-        roles: {
-            provider: '',
-            exclude: [],
-            include: []
-        }
     },
 
     breakpoints: true,
